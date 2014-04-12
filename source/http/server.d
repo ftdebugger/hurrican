@@ -6,22 +6,12 @@ import std.stdio;
 import std.conv;
 
 import hurrican.http.header;
+import hurrican.http.client;
 
-void spawnedFunc(Tid tid) {
-	Socket client = cast(Socket)receiveOnly!(shared Socket);
-	char[1024] buffer;
-	auto received = client.receive(buffer);
-	auto header = new Header(to!(string)(buffer[0.. received]));
-
-
-	//writefln("The client said:\n%s", buffer[0.. received]);
-	
-	enum respHeader = "HTTP/1.0 200 OK\nContent-Type: text/html; charset=utf-8\n\n";
-	string response = respHeader ~ "Hello World!\n";
-	client.send(response);
-
-	client.shutdown(SocketShutdown.BOTH);
-	client.close();
+private void spawnedFunc(Tid tid) {
+	Socket socket = cast(Socket)receiveOnly!(shared Socket);
+	Client client = new Client(client);
+	client.process();
 }
 
 public class Server {
