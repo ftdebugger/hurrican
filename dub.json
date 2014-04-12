@@ -1,0 +1,9 @@
+{
+	"name": "hurrican",
+	"description": "A minimal D application.",
+	"copyright": "Copyright © 2014, ftdebugger",
+	"authors": ["ftdebugger"],
+	"targetType": "executable",
+	"dependencies": {
+	}
+}
