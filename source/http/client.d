@@ -35,8 +35,16 @@ class Client {
 	}
 
 	private void sendResponse(Header header) {
-		Response response = new FileResponse(socket, header);
-		response.send();
+		Response response = ResponseBuilder.build(header);
+
+		while(true) {
+			string data = response.nextChunk();
+			if (data is null) {
+				break;
+			}
+
+			socket.send(data);
+		}
 	}
 
 	private void closeConnection() {

@@ -24,8 +24,6 @@ class Request {
 			char[1024] buffer;
 			auto received = socket.receive(buffer);
 			string data = to!(string)(buffer[0.. received]);
-			
-			writeln(data);
 			int pos = indexOf(data, "\r\n\r\n");
 
 			if (pos != -1) {

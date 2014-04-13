@@ -10,7 +10,8 @@ import  hurrican.http.exception;
 public enum HttpStatus {
 	OK = 200,
 	NOT_ALLOWED = 405,
-	NOT_FOUND = 404
+	NOT_FOUND = 404,
+	REDIRECT = 301
 }
 
 class Header {
@@ -99,7 +100,13 @@ Accept-Language: en-US,en;q=0.8,ru;q=0.6
 
 	protected string getStatusString() {
 		if (status == HttpStatus.OK) {
-			return "OK";
+			return "200 OK";
+		}
+		else if (status == HttpStatus.NOT_FOUND) {
+			return "404 Not Found";
+		}
+		else if (status == HttpStatus.REDIRECT) {
+			return "301 Found";
 		}
 		else {
 			throw new NotImplementedException();

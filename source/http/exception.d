@@ -8,8 +8,12 @@ class HttpException : Exception {
 
 class NotImplementedException : HttpException {
 
+	public this(string message) {
+		super(message);
+	}
+
 	public this() {
-		super("Not implemented");
+		this("Not implemented");
 	}
 
 }
@@ -28,8 +32,12 @@ class BadRequestException : HttpException {
 
 class NotFoundException : HttpException {
 
+	public this(string message) {
+		super(message);
+	}
+
 	public this() {
-		super("Not found");
+		this("Not found");
 	}
 
 }

@@ -8,9 +8,16 @@ import std.conv;
 import hurrican.http.client;
 
 private void spawnedFunc(Tid tid) {
-	Socket socket = cast(Socket)receiveOnly!(shared Socket);
-	Client client = new Client(socket);
-	client.process();
+	try {
+		Socket socket = cast(Socket)receiveOnly!(shared Socket);
+		Client client = new Client(socket);
+		client.process();		
+	}
+	catch(Exception e) {
+		writeln(e);
+	}
+
+	writeln("Close thread");
 }
 
 public class Server {
