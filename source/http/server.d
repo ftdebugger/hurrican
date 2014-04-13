@@ -5,12 +5,11 @@ import std.socket;
 import std.stdio;
 import std.conv;
 
-import hurrican.http.header;
 import hurrican.http.client;
 
 private void spawnedFunc(Tid tid) {
 	Socket socket = cast(Socket)receiveOnly!(shared Socket);
-	Client client = new Client(client);
+	Client client = new Client(socket);
 	client.process();
 }
 
