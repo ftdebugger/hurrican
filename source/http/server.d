@@ -6,6 +6,7 @@ import std.stdio;
 import std.conv;
 
 import hurrican.http.client;
+import hurrican.thread.pool;
 
 private void spawnedFunc(Tid tid) {
 	try {
@@ -16,14 +17,13 @@ private void spawnedFunc(Tid tid) {
 	catch(Exception e) {
 		writeln(e);
 	}
-
-	writeln("Close thread");
 }
 
 public class Server {
 
 	private InternetAddress address;
-	private int pinnedConnections = 100;
+	private int pinnedConnections = 1000;
+	private CThreadPool pool;
 
 	public this(string host, ushort port) {
 		address = new InternetAddress(host, port);
@@ -35,11 +35,35 @@ public class Server {
 		server.bind(address);
 		server.listen(pinnedConnections);
 
+		pool = new CThreadPool(16, 10, 10);
+
 		while(true) {
-			Socket client = server.accept();
-			auto tid = spawn(&spawnedFunc, thisTid);
-			tid.send(cast(shared)client);
+			Socket socket = server.accept();
+			try {
+				acceptSocket(socket);
+				//auto tid = spawn(&spawnedFunc, thisTid);
+				//tid.send(cast(shared)client);				
+			}
+			catch(Exception e) {
+				if (socket !is null) {
+					socket.close();
+				}
+				writeln(e);
+			}
 		}
+	}
+
+	private void acceptSocket(Socket socket) {
+		pool.append(delegate(){
+			try {
+				//Socket socket = cast(Socket)receiveOnly!(shared Socket);
+				Client client = new Client(socket);
+				client.process();		
+			}
+			catch(Exception e) {
+				writeln(e);
+			}
+		});
 	}
 
 

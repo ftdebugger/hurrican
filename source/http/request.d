@@ -23,6 +23,11 @@ class Request {
 		while(!found && request.length < 1024*1024) {
 			char[1024] buffer;
 			auto received = socket.receive(buffer);
+			
+			if (received == 0) {
+				break;
+			}
+
 			string data = to!(string)(buffer[0.. received]);
 			int pos = indexOf(data, "\r\n\r\n");
 

@@ -88,6 +88,9 @@ class FileResponse : Response {
 			char[4096] buffer;
 			return to!string(file.rawRead(buffer));
 		}
+		else {
+			file.close();
+		}
 
 		return null;
 	}
@@ -112,18 +115,6 @@ class FileResponse : Response {
 	}
 
 }
-
-//class NotAllowedResponse : FileResponse {
-	
-//	public this(Socket socket, Header requestHeader) {
-//		super(socket, requestHeader);
-//	}
-
-//	protected override void buildResponseHeader() {
-//		super.buildResponseHeader();
-
-//	}
-//}
 
 class NotFoundResponse : FileResponse {
 
