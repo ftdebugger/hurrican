@@ -35,7 +35,7 @@ public class Server {
 		server.bind(address);
 		server.listen(pinnedConnections);
 
-		pool = new CThreadPool(16, 10, 10);
+		pool = new CThreadPool(16, 1, 10);
 
 		while(true) {
 			Socket socket = server.accept();

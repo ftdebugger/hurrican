@@ -72,20 +72,21 @@ public:
 	*/
 	void append(void delegate() dg)
 	{
-	       Job *job;
-	       char  buf[256];
+		Job *job;
+		char  buf[256];
 
-	       if (dg == null)
-	               throw new Exception("dg null");
+		if (dg == null) {
+       		throw new Exception("dg null");
+		}
 
-	       job = new Job;
-	       job.dg = dg;
-	       job.next = null;
-	       job.call = Call.DG;
+		job = new Job;
+		job.dg = dg;
+		job.next = null;
+		job.call = Call.DG;
 
-	       m_mutex.lock();
-	       append(job);
-	       m_mutex.unlock();
+		m_mutex.lock();
+		append(job);
+		m_mutex.unlock();
 	}
 
 	/**
@@ -94,7 +95,7 @@ public:
 	*/
 	void onThreadInit(void delegate() dg)
 	{
-	       m_onThreadInit = dg;
+		m_onThreadInit = dg;
 	}
 
 	/**
@@ -103,134 +104,141 @@ public:
 	*/
 	void onThreadExit(void delegate() dg)
 	{
-	       m_onThreadExit = dg;
+       	m_onThreadExit = dg;
 	}
 
 private:
-       enum Call { NO, FN, DG }
+	enum Call { NO, FN, DG }
 
-       Mutex m_mutex;
-       Condition m_cond;
-       size_t m_stackSize = 0;
+	Mutex m_mutex;
+	Condition m_cond;
+	size_t m_stackSize = 0;
 
-       Job* m_jobHead = null, m_jobTail = null;
-       int m_nJob = 0;
-       bool m_isQuit = false;
-       int m_nThread = 0;
-       int m_nMaxThread;
-       int m_nIdleThread = 0;
-       int m_overloadTimeWait = 0;
-       int m_idleTimeout;
-       time_t m_lastWarn;
+	Job* m_jobHead = null, m_jobTail = null;
+	int m_nJob = 0;
+	bool m_isQuit = false;
+	int m_nThread = 0;
+	int m_nMaxThread;
+	int m_nIdleThread = 0;
+	int m_overloadTimeWait = 0;
+	int m_idleTimeout;
+	time_t m_lastWarn;
 
-       void delegate() m_onThreadInit;
-       void delegate() m_onThreadExit;
-       void append(Job *job)
-       {
-               if (m_jobHead == null)
-                       m_jobHead = job;
-               else
-                       m_jobTail.next = job;
-               m_jobTail = job;
+	void delegate() m_onThreadInit;
+	void delegate() m_onThreadExit;
+	void append(Job *job)
+	{
+		if (m_jobHead == null) {
+	    	m_jobHead = job;
+		}		
+		else {
+		    m_jobTail.next = job;
+		}
 
-               m_nJob++;
+		m_jobTail = job;
+		m_nJob++;
 
-               if (m_nIdleThread > 0) {
-                       m_cond.notify();
-               } else if (m_nThread < m_nMaxThread) {
-                       Thread thread = new Thread(&doJob);
-                       thread.isDaemon = true;
-                       thread.start();
-                       m_nThread++;
-               } else if (m_nJob > 10 * m_nMaxThread) {
-                       time_t now = time(null);
-                       if (now - m_lastWarn >= 2) {
-                               m_lastWarn = now;
-                       }
-                       if (m_overloadTimeWait > 0) {
-                               Thread.sleep(dur!("msecs")( m_overloadTimeWait ));
-                       }
-               }
-       }
-       void doJob()
-       {
-               Job *job;
-               int status;
-               bool timedout;
-               long period = m_idleTimeout * 10_000_000;
+		if (m_nIdleThread > 0) {
+		    m_cond.notify();
+		} else if (m_nThread < m_nMaxThread) {
+			Thread thread = new Thread(&doJob);
+			thread.isDaemon = true;
+			thread.start();
+   			m_nThread++;
+		} else if (m_nJob > 10 * m_nMaxThread) {
+			time_t now = time(null);
+			if (now - m_lastWarn >= 2) {
+	       		m_lastWarn = now;
+			}
+			if (m_overloadTimeWait > 0) {
+			    Thread.sleep(dur!("msecs")( m_overloadTimeWait ));
+			}
+		}
+	}
+	void doJob()
+	{
+		Job *job;
+		int status;
+		bool timedout;
+		long period = m_idleTimeout * 10_000_000;
 
-               if (m_onThreadInit != null)
-                       m_onThreadInit();
+		if (m_onThreadInit != null) {
+	    	m_onThreadInit();
+		}
 
-               m_mutex.lock();
-               for (;;) {
-                       timedout = false;
+		m_mutex.lock();
+		for (;;) {
+			timedout = false;
 
-                       while (m_jobHead == null && !m_isQuit) {
-                               m_nIdleThread++;
-                               if (period > 0) {
-                                       try {
-                                               if (m_cond.wait(dur!("msecs")( period )) ==
-false) {
-                                                       timedout = true;
-                                                       break;
-                                               }
-                                       } catch (SyncException e) {
-                                               m_nIdleThread--;
-                                               m_nThread--;
-                                               m_mutex.unlock();
-                                               if (m_onThreadExit != null)
-                                                       m_onThreadExit();
-                                               throw e;
-                                       }
-                               } else {
-                                       m_cond.wait();
-                               }
-                               m_nIdleThread--;
-                       }  /* end while */
-                       job = m_jobHead;
+			while (m_jobHead == null && !m_isQuit) {
+				m_nIdleThread++;
+				if (period > 0) {
+					try {
+						if (m_cond.wait(dur!("msecs")( period )) == false) {
+							timedout = true;
+							break;
+						}
+					} catch (SyncException e) {
+						m_nIdleThread--;
+						m_nThread--;
+						m_mutex.unlock();
+						
+						if (m_onThreadExit != null) {
+							m_onThreadExit();
+						}
 
-                       if (job != null) {
-                               m_jobHead = job.next;
-                               m_nJob--;
-                               if (m_jobTail == job)
-                                       m_jobTail = null;
-                               /* the lock shuld be unlocked before enter
-working processs */
-                               m_mutex.unlock();
-                               switch (job.call) {
-                               case Call.FN:
-                                       job.fn();
-                                       break;
-                               case Call.DG:
-                                       job.dg();
-                                       break;
-                               default:
-                                       break;
-                               }
+						throw e;
+					}
+				} else {
+			    	m_cond.wait();
+				}
+				m_nIdleThread--;
+			}  /* end while */
+			job = m_jobHead;
 
-                               /* lock again */
-                               m_mutex.lock();
-                       }
-                       if (m_jobHead == null && m_isQuit) {
-                               m_nThread--;
-                               if (m_nThread == 0)
-                                       m_cond.notifyAll();
-                               break;
-                       }
-                       if (m_jobHead == null && timedout) {
-                               m_nThread--;
-                               break;
-                       }
-               }
+			if (job != null) {
+				m_jobHead = job.next;
+				m_nJob--;
+				if (m_jobTail == job) {
+					m_jobTail = null;
+				}
+				/* the lock shuld be unlocked before enter
+				working processs */
+				m_mutex.unlock();
+				switch (job.call) {
+					case Call.FN:
+			       		job.fn();
+			       		break;
+					case Call.DG:
+			       		job.dg();
+			       		break;
+					default:
+					    break;
+				}
+				/* lock again */
+				m_mutex.lock();
+			}
+			if (m_jobHead == null && m_isQuit) {
+				m_nThread--;
+				if (m_nThread == 0) {
+					m_cond.notifyAll();
+				}
+				
+   				break;
+			}
+			if (m_jobHead == null && timedout) {
+			       m_nThread--;
+			       break;
+			}
+		}
 
-               m_mutex.unlock();
+		m_mutex.unlock();
 
-               writefln("Thread(%d) of ThreadPool exit now", pthread_self());
-               if (m_onThreadExit != null)
-                       m_onThreadExit();
-       }
-}
+		writefln("Thread(%d) of ThreadPool exit now", pthread_self());
+		if (m_onThreadExit != null)
+		       m_onThreadExit();
+	}
+	}
 
 import std.stdio;
 unittest
