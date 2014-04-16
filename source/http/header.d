@@ -9,6 +9,7 @@ import  hurrican.http.exception;
 
 public enum HttpStatus {
     OK = 200,
+    BAD_REQUEST = 401,
     NOT_ALLOWED = 405,
     NOT_FOUND = 404,
     REDIRECT = 301
@@ -38,14 +39,25 @@ class Header {
         if (line.length > 3 && line[0..3] == "GET") {
             parseGet(line);
         }
+        else if (line.length > 4 && line[0..3] == "GET") {
+            parseGet(line);
+        }
         else {
             parseHeader(line);
         }
     }
 
     private void parseGet(string line) {
-        url = line[4..line.length-9];
-        method = "GET";
+        string[] methods = ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS", "PATCH"];
+
+        foreach(string method; methods) {
+            if (line.length > method.length + 1) {
+                if (line[0..method.length + 1] == method ~ ' ') {
+                    this.method = method;
+                    this.url = line[method.length + 1..$];
+                }
+            }
+        }
     }
 
     private void parseHeader(string line) {
@@ -108,9 +120,19 @@ Accept-Language: en-US,en;q=0.8,ru;q=0.6
         else if (status == HttpStatus.REDIRECT) {
             return "301 Found";
         }
+        else if (status == HttpStatus.NOT_ALLOWED) {
+            return "405 Not Allowed";
+        }
+        else if (status == HttpStatus.BAD_REQUEST) {
+            return "401 Bad Request";
+        }
         else {
             throw new NotImplementedException();
         }
+    }
+
+    public bool isGet() {
+        return method == "GET";
     }
 
     public override string toString() {

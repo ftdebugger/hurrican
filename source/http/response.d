@@ -47,7 +47,7 @@ class FileResponse : Response {
         string url = getRequestHeader().getURL();
 
         if (url == "") {
-            return notFoundResponse();
+            return badRequestResponse();
         }
 
         path = getcwd() ~ url;
@@ -111,25 +111,36 @@ class FileResponse : Response {
     }
 
     protected Response notFoundResponse() {
-        return new NotFoundResponse(getRequestHeader());
+        return new ErrorStaticResponse(getRequestHeader(), HttpStatus.NOT_FOUND, "error/404.html");
+    }
+
+    protected Response notAllowedResponse() {
+        return new ErrorStaticResponse(getRequestHeader(), HttpStatus.NOT_ALLOWED, "error/405.html");
+    }
+
+    protected Response badRequestResponse() {
+        return new ErrorStaticResponse(getRequestHeader(), HttpStatus.BAD_REQUEST, "error/405.html");
     }
 
 }
 
-class NotFoundResponse : FileResponse {
+class ErrorStaticResponse : FileResponse {
 
-    public this(Header requestHeader) {
+    private HttpStatus status;
+
+    public this(Header requestHeader, HttpStatus status, string path) {
         super(requestHeader);
+        this.status = status;
+        this.path = path;
     }
 
     protected override Response nextResponse() {
-        path = "error/404.html";
         return null;
     }
 
     protected override string buildResponseHeader() {
         super.buildResponseHeader();
-        getResponseHeader().setStatus(HttpStatus.NOT_FOUND);
+        getResponseHeader().setStatus(status);
 
         return getResponseHeader().toString() ~ "\r\n\r\n";
     }
@@ -170,7 +181,14 @@ class RedirectResponse : Response {
 class ResponseBuilder {
 
     public static Response build(Header header) {
-        Response response = new FileResponse(header);
+        Response response;
+
+        if (header.isGet()) {
+            response = new FileResponse(header);
+        }
+        else {
+            response = new ErrorStaticResponse(header, HttpStatus.BAD_REQUEST, "error/405.html");
+        }
 
         int maxHopes = 5;
         while(maxHopes-- > 0) {
