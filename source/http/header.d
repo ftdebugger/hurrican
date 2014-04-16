@@ -55,6 +55,7 @@ class Header {
                 if (line[0..method.length + 1] == method ~ ' ') {
                     this.method = method;
                     this.url = line[method.length + 1..$];
+                    break;
                 }
             }
         }
