@@ -9,43 +9,43 @@ import hurrican.http.header;
 
 class Request {
 
-	private Socket socket;
-	private string request;
-	private Header header;
+    private Socket socket;
+    private string request;
+    private Header header;
 
-	public this(Socket socket) {
-		this.socket = socket;
-	}
+    public this(Socket socket) {
+        this.socket = socket;
+    }
 
-	public void read() {
-		bool found = false;
+    public void read() {
+        bool found = false;
 
-		while(!found && request.length < 1024*1024) {
-			char[1024] buffer;
-			auto received = socket.receive(buffer);
-			
-			if (received == 0) {
-				break;
-			}
+        while(!found && request.length < 1024*1024) {
+            char[1024] buffer;
+            auto received = socket.receive(buffer);
+            
+            if (received == 0) {
+                break;
+            }
 
-			string data = to!(string)(buffer[0.. received]);
-			int pos = indexOf(data, "\r\n\r\n");
+            string data = to!(string)(buffer[0.. received]);
+            int pos = indexOf(data, "\r\n\r\n");
 
-			if (pos != -1) {
-				data = data[0..pos];
-				found = true;
-			}
+            if (pos != -1) {
+                data = data[0..pos];
+                found = true;
+            }
 
-			request ~= data;
-		}
-	}
+            request ~= data;
+        }
+    }
 
-	public Header getHeader() {
-		if (header is null) {
-			header = new Header(request);
-		}
+    public Header getHeader() {
+        if (header is null) {
+            header = new Header(request);
+        }
 
-		return header;
-	}
+        return header;
+    }
 
 }

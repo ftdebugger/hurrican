@@ -12,176 +12,176 @@ import hurrican.http.exception;
 
 abstract class Response {
 
-	private Header requestHeader;
-	private Header responsetHeader = new Header();
+    private Header requestHeader;
+    private Header responsetHeader = new Header();
 
-	public this(Header requestHeader) {
-		this.requestHeader = requestHeader;
-	}
+    public this(Header requestHeader) {
+        this.requestHeader = requestHeader;
+    }
 
-	public Header getRequestHeader() {
-		return requestHeader;
-	}
+    public Header getRequestHeader() {
+        return requestHeader;
+    }
 
-	public Header getResponseHeader() {
-		return responsetHeader;
-	}
+    public Header getResponseHeader() {
+        return responsetHeader;
+    }
 
-	public abstract Response nextResponse();
-	public abstract void close();
-	public abstract string nextChunk();
+    public abstract Response nextResponse();
+    public abstract void close();
+    public abstract string nextChunk();
 }
 
 class FileResponse : Response {
 
-	protected string path;
-	protected bool headerSent = false;
-	protected File file;
-	protected bool fileOpened = false;
+    protected string path;
+    protected bool headerSent = false;
+    protected File file;
+    protected bool fileOpened = false;
 
-	public this(Header requestHeader) {
-		super(requestHeader);
-	}
+    public this(Header requestHeader) {
+        super(requestHeader);
+    }
 
-	public override Response nextResponse() {
-		string url = getRequestHeader().getURL();
+    public override Response nextResponse() {
+        string url = getRequestHeader().getURL();
 
-		if (url == "") {
-			return notFoundResponse();
-		}
+        if (url == "") {
+            return notFoundResponse();
+        }
 
-		path = getcwd() ~ url;
-		if (!exists(path)) {
-			return notFoundResponse();
-		}
+        path = getcwd() ~ url;
+        if (!exists(path)) {
+            return notFoundResponse();
+        }
 
-		if (isDir(path)) {
-			if (path[$ - 1] != '/') {
-				return new RedirectResponse(getRequestHeader(), url ~ "/");
-			} 
+        if (isDir(path)) {
+            if (path[$ - 1] != '/') {
+                return new RedirectResponse(getRequestHeader(), url ~ "/");
+            } 
 
-			path ~= "index.html";
-		}
+            path ~= "index.html";
+        }
 
-		if (path == "" || !exists(path) || !isFile(path)) {
-			return notFoundResponse();
-		}
+        if (path == "" || !exists(path) || !isFile(path)) {
+            return notFoundResponse();
+        }
 
-		return null;
-	}
+        return null;
+    }
 
-	protected string buildResponseHeader() {
-		auto response = getResponseHeader();
-		response.setStatus(HttpStatus.OK);
-		response.setHeader("Content-Type", getMimeType(path));
+    protected string buildResponseHeader() {
+        auto response = getResponseHeader();
+        response.setStatus(HttpStatus.OK);
+        response.setHeader("Content-Type", getMimeType(path));
 
-		return getResponseHeader().toString() ~ "\r\n\r\n";
-	}
+        return getResponseHeader().toString() ~ "\r\n\r\n";
+    }
 
-	protected string getBodyChunk() {
-		if (!fileOpened) {
-			fileOpened = true;
-			file = File(path, "rb");
-		}
+    protected string getBodyChunk() {
+        if (!fileOpened) {
+            fileOpened = true;
+            file = File(path, "rb");
+        }
 
-		if(!file.eof) {
-			char[4096] buffer;
-			return to!string(file.rawRead(buffer));
-		}
-		else {
-			file.close();
-		}
+        if(!file.eof) {
+            char[4096] buffer;
+            return to!string(file.rawRead(buffer));
+        }
+        else {
+            file.close();
+        }
 
-		return null;
-	}
+        return null;
+    }
 
 
-	public override string nextChunk() {
-		if (!headerSent) {
-			headerSent = true;
-			return buildResponseHeader();
-		}
-		else {
-			return getBodyChunk();
-		}
-	}
+    public override string nextChunk() {
+        if (!headerSent) {
+            headerSent = true;
+            return buildResponseHeader();
+        }
+        else {
+            return getBodyChunk();
+        }
+    }
 
-	public override void close() {
-		file.close();
-	}
+    public override void close() {
+        file.close();
+    }
 
-	protected Response notFoundResponse() {
-		return new NotFoundResponse(getRequestHeader());
-	}
+    protected Response notFoundResponse() {
+        return new NotFoundResponse(getRequestHeader());
+    }
 
 }
 
 class NotFoundResponse : FileResponse {
 
-	public this(Header requestHeader) {
-		super(requestHeader);
-	}
+    public this(Header requestHeader) {
+        super(requestHeader);
+    }
 
-	protected override Response nextResponse() {
-		path = "error/404.html";
-		return null;
-	}
+    protected override Response nextResponse() {
+        path = "error/404.html";
+        return null;
+    }
 
-	protected override string buildResponseHeader() {
-		super.buildResponseHeader();
-		getResponseHeader().setStatus(HttpStatus.NOT_FOUND);
+    protected override string buildResponseHeader() {
+        super.buildResponseHeader();
+        getResponseHeader().setStatus(HttpStatus.NOT_FOUND);
 
-		return getResponseHeader().toString() ~ "\r\n\r\n";
-	}
+        return getResponseHeader().toString() ~ "\r\n\r\n";
+    }
 
 }
 
 class RedirectResponse : Response {
 
-	private string redirect;
-	protected bool headerSent = false;
+    private string redirect;
+    protected bool headerSent = false;
 
-	public this(Header requestHeader, string redirect) {
-		super(requestHeader);
-		this.redirect = redirect;
-	}
+    public this(Header requestHeader, string redirect) {
+        super(requestHeader);
+        this.redirect = redirect;
+    }
 
-	protected override Response nextResponse() {
-		return null;
-	}
+    protected override Response nextResponse() {
+        return null;
+    }
 
-	public override string nextChunk() {
-		if (!headerSent) {
-			headerSent = true;
+    public override string nextChunk() {
+        if (!headerSent) {
+            headerSent = true;
 
-			getResponseHeader().setStatus(HttpStatus.REDIRECT);
-			getResponseHeader().setHeader("Location", redirect);
-			return getResponseHeader().toString() ~ "\r\n\r\n";
-		}
-		else {
-			return null;
-		}
-	}
+            getResponseHeader().setStatus(HttpStatus.REDIRECT);
+            getResponseHeader().setHeader("Location", redirect);
+            return getResponseHeader().toString() ~ "\r\n\r\n";
+        }
+        else {
+            return null;
+        }
+    }
 
-	public override void close() {
-	}
+    public override void close() {
+    }
 }
 
 class ResponseBuilder {
 
-	public static Response build(Header header) {
-		Response response = new FileResponse(header);
+    public static Response build(Header header) {
+        Response response = new FileResponse(header);
 
-		int maxHopes = 5;
-		while(maxHopes-- > 0) {
-			Response nextResponse = response.nextResponse();
-			if (nextResponse is null) {
-				break;
-			}
-			response = nextResponse;
-		}
+        int maxHopes = 5;
+        while(maxHopes-- > 0) {
+            Response nextResponse = response.nextResponse();
+            if (nextResponse is null) {
+                break;
+            }
+            response = nextResponse;
+        }
 
-		return response;
-	}
+        return response;
+    }
 
 }

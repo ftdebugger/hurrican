@@ -5,35 +5,35 @@ import std.string;
 import std.stdio;
 
 public string getMimeType(string path) {
-	string ext = toLower(extension(path));
+    string ext = toLower(extension(path));
 
-	if (ext == ".htm" || ext == ".html") {
-		return "text/html";
-	}
+    if (ext == ".htm" || ext == ".html") {
+        return "text/html";
+    }
 
-	if (ext == ".css") {
-		return "text/css";
-	}
+    if (ext == ".css") {
+        return "text/css";
+    }
 
-	if (ext == ".js") {
-		return "application/javascript";
-	}
+    if (ext == ".js") {
+        return "application/javascript";
+    }
 
-	if (ext == ".jpg") {
-		return "image/jpeg";
-	}
+    if (ext == ".jpg") {
+        return "image/jpeg";
+    }
 
-	if (ext == ".png") {
-		return "image/png";
-	}
+    if (ext == ".png") {
+        return "image/png";
+    }
 
-	if (ext == ".gif") {
-		return "image/gif";
-	}
+    if (ext == ".gif") {
+        return "image/gif";
+    }
 
-	return "application/octet-stream";
+    return "application/octet-stream";
 }
 
 unittest {
-	assert(getMimeType("index.html") == "text/html");
+    assert(getMimeType("index.html") == "text/html");
 }
