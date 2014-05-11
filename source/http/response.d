@@ -89,6 +89,9 @@ class FileResponse : Response {
         else {
             response.setHeader("Content-Length", getSize(path));
         }
+
+        response.setHeader("Cache-Control", "public, max-age=86400");
+
         return getResponseHeader().toString() ~ "\r\n\r\n";
     }
 
@@ -149,7 +152,7 @@ class ErrorStaticResponse : FileResponse {
     public this(Header requestHeader, HttpStatus status, string path, Config config) {
         super(requestHeader, config);
         this.status = status;
-        this.path = "/home/ftdebugger/workspace/hurrican/" ~ path;
+        this.path = path;
     }
 
     protected override Response nextResponse() {
@@ -169,15 +172,28 @@ class ErrorStaticResponse : FileResponse {
     }
 
     public static Response notAllowedResponse(Header header, Config config) {
-        return new ErrorStaticResponse(header, HttpStatus.NOT_ALLOWED, config.getRoot() ~ "/error/405.html", config);
+        return new NotAllowedResponse(header, config);
     }
 
     public static Response badRequestResponse(Header header, Config config) {
-        return new ErrorStaticResponse(header, HttpStatus.BAD_REQUEST, config.getRoot() ~ "/error/405.html", config);
+        return new ErrorStaticResponse(header, HttpStatus.BAD_REQUEST, config.getRoot() ~ "/error/401.html", config);
     }
 
-
 }
+
+class NotAllowedResponse : ErrorStaticResponse {
+
+    public this(Header requestHeader, Config config) {
+        super(requestHeader, HttpStatus.NOT_ALLOWED, config.getRoot() ~ "/error/405.html", config);
+    }
+
+    protected override string buildResponseHeader() {
+        super.buildResponseHeader();
+        getResponseHeader().setHeader("Allow", "GET, HEAD");
+
+        return getResponseHeader().toString() ~ "\r\n\r\n";
+    }
+} 
 
 class RedirectResponse : Response {
 
