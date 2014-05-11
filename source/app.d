@@ -21,11 +21,11 @@ void main(string[] args)
 	);
 
 	if (!port) {
-		port = 8888;
+		port = 80;
 	}
 
 	if (!host) {
-		host = "127.0.0.1";
+		host = "0.0.0.0";
 	}
 
 	config.setHost(host);
