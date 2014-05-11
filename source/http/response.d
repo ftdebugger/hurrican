@@ -9,14 +9,18 @@ import hurrican.util.string;
 import hurrican.util.mime;
 import hurrican.http.header;
 import hurrican.http.exception;
+import hurrican.http.config;
+import hurrican.util.root;
 
 abstract class Response {
 
     private Header requestHeader;
     private Header responsetHeader = new Header();
+    private Config config;
 
-    public this(Header requestHeader) {
+    public this(Header requestHeader, Config config) {
         this.requestHeader = requestHeader;
+        this.config = config;
     }
 
     public Header getRequestHeader() {
@@ -25,6 +29,10 @@ abstract class Response {
 
     public Header getResponseHeader() {
         return responsetHeader;
+    }
+
+    public Config getConfig() {
+        return config;
     }
 
     public abstract Response nextResponse();
@@ -39,8 +47,8 @@ class FileResponse : Response {
     protected File file;
     protected bool fileOpened = false;
 
-    public this(Header requestHeader) {
-        super(requestHeader);
+    public this(Header requestHeader, Config config) {
+        super(requestHeader, config);
     }
 
     public override Response nextResponse() {
@@ -51,13 +59,14 @@ class FileResponse : Response {
         }
 
         path = getcwd() ~ url;
-        if (!exists(path)) {
+
+        if (!exists(path) || indexOf(path, "/../") != -1) {
             return notFoundResponse();
         }
 
         if (isDir(path)) {
             if (path[$ - 1] != '/') {
-                return new RedirectResponse(getRequestHeader(), url ~ "/");
+                return new RedirectResponse(getRequestHeader(), url ~ "/", config);
             } 
 
             path ~= "index.html";
@@ -74,11 +83,20 @@ class FileResponse : Response {
         auto response = getResponseHeader();
         response.setStatus(HttpStatus.OK);
         response.setHeader("Content-Type", getMimeType(path));
-
+        if (getRequestHeader().isHead()) {
+            response.setHeader("Content-Length", 0);
+        }
+        else {
+            response.setHeader("Content-Length", getSize(path));
+        }
         return getResponseHeader().toString() ~ "\r\n\r\n";
     }
 
     protected string getBodyChunk() {
+        if (getRequestHeader().isHead()) {
+            return null;
+        }
+
         if (!fileOpened) {
             fileOpened = true;
             file = File(path, "rb");
@@ -111,15 +129,15 @@ class FileResponse : Response {
     }
 
     protected Response notFoundResponse() {
-        return new ErrorStaticResponse(getRequestHeader(), HttpStatus.NOT_FOUND, "error/404.html");
+        return ErrorStaticResponse.notFoundResponse(getRequestHeader(), config);
     }
 
     protected Response notAllowedResponse() {
-        return new ErrorStaticResponse(getRequestHeader(), HttpStatus.NOT_ALLOWED, "error/405.html");
+        return ErrorStaticResponse.notAllowedResponse(getRequestHeader(), config);
     }
 
     protected Response badRequestResponse() {
-        return new ErrorStaticResponse(getRequestHeader(), HttpStatus.BAD_REQUEST, "error/405.html");
+        return ErrorStaticResponse.badRequestResponse(getRequestHeader(), config);
     }
 
 }
@@ -128,10 +146,10 @@ class ErrorStaticResponse : FileResponse {
 
     private HttpStatus status;
 
-    public this(Header requestHeader, HttpStatus status, string path) {
-        super(requestHeader);
+    public this(Header requestHeader, HttpStatus status, string path, Config config) {
+        super(requestHeader, config);
         this.status = status;
-        this.path = path;
+        this.path = "/home/ftdebugger/workspace/hurrican/" ~ path;
     }
 
     protected override Response nextResponse() {
@@ -145,6 +163,20 @@ class ErrorStaticResponse : FileResponse {
         return getResponseHeader().toString() ~ "\r\n\r\n";
     }
 
+
+    public static Response notFoundResponse(Header header, Config config) {
+        return new ErrorStaticResponse(header, HttpStatus.NOT_FOUND, config.getRoot() ~ "/error/404.html", config);
+    }
+
+    public static Response notAllowedResponse(Header header, Config config) {
+        return new ErrorStaticResponse(header, HttpStatus.NOT_ALLOWED, config.getRoot() ~ "/error/405.html", config);
+    }
+
+    public static Response badRequestResponse(Header header, Config config) {
+        return new ErrorStaticResponse(header, HttpStatus.BAD_REQUEST, config.getRoot() ~ "/error/405.html", config);
+    }
+
+
 }
 
 class RedirectResponse : Response {
@@ -152,8 +184,8 @@ class RedirectResponse : Response {
     private string redirect;
     protected bool headerSent = false;
 
-    public this(Header requestHeader, string redirect) {
-        super(requestHeader);
+    public this(Header requestHeader, string redirect, Config config) {
+        super(requestHeader, config);
         this.redirect = redirect;
     }
 
@@ -180,14 +212,14 @@ class RedirectResponse : Response {
 
 class ResponseBuilder {
 
-    public static Response build(Header header) {
+    public static Response build(Header header, Config config) {
         Response response;
 
-        if (header.isGet()) {
-            response = new FileResponse(header);
+        if (header.isGet() || header.isHead()) {
+            response = new FileResponse(header, config);
         }
         else {
-            response = new ErrorStaticResponse(header, HttpStatus.BAD_REQUEST, "error/405.html");
+            response = ErrorStaticResponse.notAllowedResponse(header, config);
         }
 
         int maxHopes = 5;

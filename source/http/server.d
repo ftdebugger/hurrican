@@ -6,27 +6,19 @@ import std.stdio;
 import std.conv;
 
 import hurrican.http.client;
+import hurrican.http.config;
 import hurrican.thread.pool;
-
-private void spawnedFunc(Tid tid) {
-    try {
-        Socket socket = cast(Socket)receiveOnly!(shared Socket);
-        Client client = new Client(socket);
-        client.process();       
-    }
-    catch(Exception e) {
-        writeln(e);
-    }
-}
 
 public class Server {
 
     private InternetAddress address;
     private int pinnedConnections = 1000;
     private CThreadPool pool;
+    private Config config;
 
-    public this(string host, ushort port) {
-        address = new InternetAddress(host, port);
+    public this(Config config) {
+        this.config = config;
+        address = new InternetAddress(config.getHost(), config.getPort());
     }
 
     public void run() {
@@ -40,9 +32,7 @@ public class Server {
         while(true) {
             Socket socket = server.accept();
             try {
-                acceptSocket(socket);
-                //auto tid = spawn(&spawnedFunc, thisTid);
-                //tid.send(cast(shared)client);             
+                acceptSocket(socket);   
             }
             catch(Exception e) {
                 if (socket !is null) {
@@ -56,8 +46,7 @@ public class Server {
     private void acceptSocket(Socket socket) {
         pool.append(delegate(){
             try {
-                //Socket socket = cast(Socket)receiveOnly!(shared Socket);
-                Client client = new Client(socket);
+                Client client = new Client(socket, config);
                 client.process();       
             }
             catch(Exception e) {

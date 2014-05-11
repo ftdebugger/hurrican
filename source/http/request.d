@@ -6,6 +6,7 @@ import std.socket;
 
 import hurrican.util.string;
 import hurrican.http.header;
+import hurrican.http.config;
 
 class Request {
 
@@ -13,7 +14,7 @@ class Request {
     private string request;
     private Header header;
 
-    public this(Socket socket) {
+    public this(Socket socket, Config config) {
         this.socket = socket;
     }
 

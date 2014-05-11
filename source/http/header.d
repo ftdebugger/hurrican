@@ -36,18 +36,15 @@ class Header {
     }
 
     private void parseLine(string line) {
-        if (line.length > 3 && line[0..3] == "GET") {
-            parseGet(line);
-        }
-        else if (line.length > 4 && line[0..3] == "GET") {
-            parseGet(line);
+        if (method == "") {
+            parseMethod(line);
         }
         else {
             parseHeader(line);
         }
     }
 
-    private void parseGet(string line) {
+    private void parseMethod(string line) {
         string[] methods = ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS", "PATCH"];
 
         foreach(string method; methods) {
@@ -55,6 +52,7 @@ class Header {
                 if (line[0..method.length + 1] == method ~ ' ') {
                     this.method = method;
                     this.url = line[method.length + 1..$];
+                    this.url = this.url[0..$-9];
                     break;
                 }
             }
@@ -111,6 +109,10 @@ Accept-Language: en-US,en;q=0.8,ru;q=0.6
         headers[key] = value;
     }
 
+    public void setHeader(T)(string key, T value) {
+        setHeader(key, to!string(value));
+    }
+
     protected string getStatusString() {
         if (status == HttpStatus.OK) {
             return "200 OK";
@@ -134,6 +136,10 @@ Accept-Language: en-US,en;q=0.8,ru;q=0.6
 
     public bool isGet() {
         return method == "GET";
+    }
+
+    public bool isHead() {
+        return method == "HEAD";
     }
 
     public override string toString() {

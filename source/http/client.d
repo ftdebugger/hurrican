@@ -7,16 +7,18 @@ import std.socket;
 import hurrican.http.header;
 import hurrican.http.request;
 import hurrican.http.response;
+import hurrican.http.config;
 
 class Client {
 
     private Socket socket;
     private Request request;
+    private Config config;
 
-    public this(Socket socket) {
+    public this(Socket socket, Config config) {
         this.socket = socket;
-        this.request = new Request(socket);
-
+        this.config = config;
+        this.request = new Request(socket, config);
     }
 
     public void process() {
@@ -35,7 +37,7 @@ class Client {
     }
 
     private void sendResponse(Header header) {
-        Response response = ResponseBuilder.build(header);
+        Response response = ResponseBuilder.build(header, config);
 
         while(true) {
             string data = response.nextChunk();
