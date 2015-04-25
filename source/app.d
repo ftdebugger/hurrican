@@ -6,18 +6,23 @@ import std.getopt;
 import hurrican.http.server;
 import hurrican.http.config;
 
+import std.stdio;
+
 void main(string[] args)
 {
-	Config config = new Config();
-	config.setRoot(dirName(args[0]));
+	//Config config = new Config();
+	//config.setRoot(dirName(args[0]));
 	
 	ushort port;
 	string host;
 
+	string configFile;
+
 	getopt(
 		args,
 		"port", &port,
-		"host", &host	
+		"host", &host,
+		"config", &configFile	
 	);
 
 	if (!port) {
@@ -28,8 +33,15 @@ void main(string[] args)
 		host = "0.0.0.0";
 	}
 
-	config.setHost(host);
-	config.setPort(port);
+	if (!configFile) {
+		configFile = "config.json";
+	}
+
+	auto config = ConfigReader.read(configFile, dirName(args[0]));
+	writeln(config);
+
+	//config.setHost(host);
+	//config.setPort(port);
 
     Server server = new Server(config);
     server.run();

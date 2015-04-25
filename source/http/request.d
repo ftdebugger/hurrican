@@ -13,9 +13,11 @@ class Request {
     private Socket socket;
     private string request;
     private Header header;
+    private Config config;
 
     public this(Socket socket, Config config) {
         this.socket = socket;
+        this.config = config;
     }
 
     public void read() {
@@ -48,5 +50,7 @@ class Request {
 
         return header;
     }
+
+    
 
 }

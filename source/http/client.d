@@ -18,13 +18,13 @@ class Client {
     public this(Socket socket, Config config) {
         this.socket = socket;
         this.config = config;
+
         this.request = new Request(socket, config);
     }
 
     public void process() {
         try {
-            Header header = readRequest();
-            sendResponse(header);
+            sendResponse(readRequest());
         }
         finally {
             closeConnection();

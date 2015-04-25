@@ -4,6 +4,8 @@ import std.stdio;
 import std.conv;
 import std.socket;
 import std.file;
+import std.socket;
+import std.regex;
 
 import hurrican.util.string;
 import hurrican.util.mime;
@@ -46,26 +48,37 @@ class FileResponse : Response {
     protected bool headerSent = false;
     protected File file;
     protected bool fileOpened = false;
+    protected ConfigLocation location;
 
     public this(Header requestHeader, Config config) {
         super(requestHeader, config);
     }
 
+    public this(Header requestHeader, Config config, ConfigLocation location) {
+        this(requestHeader, config);
+        this.location = location;
+    }
+
     public override Response nextResponse() {
         string url = getRequestHeader().getURL();
 
+        writeln("> GET " ~ url);
+
         if (url == "") {
+            writeln("< 400 Bad request");
             return badRequestResponse();
         }
 
-        path = getcwd() ~ url;
+        path = location.getRoot() ~ url;
 
         if (!exists(path) || indexOf(path, "/../") != -1) {
+            writeln("< 404 Not found");
             return notFoundResponse();
         }
 
         if (isDir(path)) {
             if (path[$ - 1] != '/') {
+                writeln("< 302 Moved (" ~ url ~ "/)");
                 return new RedirectResponse(getRequestHeader(), url ~ "/", config);
             } 
 
@@ -73,8 +86,11 @@ class FileResponse : Response {
         }
 
         if (path == "" || !exists(path) || !isFile(path)) {
+            writeln("< 404 Not found");
             return notFoundResponse();
         }
+
+        writeln("< 200 OK (" ~ path ~ ")");
 
         return null;
     }
@@ -141,6 +157,54 @@ class FileResponse : Response {
 
     protected Response badRequestResponse() {
         return ErrorStaticResponse.badRequestResponse(getRequestHeader(), config);
+    }
+
+}
+
+class ProxyResponse : Response {
+
+    protected ConfigLocation location;
+    protected Socket client;
+
+    public this(Header requestHeader, Config config, ConfigLocation location) {
+        super(requestHeader, config);
+        this.location = location;
+    }
+
+    public override Response nextResponse() {
+        auto m = match(location.getRoot(), r"^http://(.+)(:[0-9]+)?$");
+        auto host = m.captures[1];
+
+        auto address = new InternetAddress(host, 80);
+        
+        client = new TcpSocket();
+        client.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+        client.connect(address);
+
+        auto header = getRequestHeader();
+        header.setHeader("host", host);
+
+        auto request = getRequestHeader().buildRequestHeaders() ~ "\r\n\r\n";
+        client.send(request);
+
+        writeln(request);
+
+        return null;
+    }
+
+    public override string nextChunk() {
+        char[1024] buffer;
+        auto received = client.receive(buffer);
+        
+        if (received == 0) {
+            return null;
+        }
+
+        return to!(string)(buffer[0.. received]);
+    }
+
+    public override void close() {
+        client.close();
     }
 
 }
@@ -228,11 +292,34 @@ class RedirectResponse : Response {
 
 class ResponseBuilder {
 
+    private static Response buildFileResponse(Header header, Config config, ConfigLocation location) {
+        if (location is null) {
+            return ErrorStaticResponse.notFoundResponse(header, config);
+        }
+
+        if (location.isStatic()) {
+            return new FileResponse(header, config, location);
+        }
+
+        if (location.isProxy()) {
+            return new ProxyResponse(header, config, location);
+        }
+
+        return null;
+    }
+
     public static Response build(Header header, Config config) {
         Response response;
 
         if (header.isGet() || header.isHead()) {
-            response = new FileResponse(header, config);
+            auto host = config.searchHost(header.getHost());
+            if (host is null) {
+                response = ErrorStaticResponse.notFoundResponse(header, config);
+            }
+            else {
+                auto location = host.matchLocation(header.getURL());
+                response = buildFileResponse(header, config, location);
+            }
         }
         else {
             response = ErrorStaticResponse.notAllowedResponse(header, config);
