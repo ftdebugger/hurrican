@@ -113,6 +113,14 @@ Accept-Language: en-US,en;q=0.8,ru;q=0.6
         setHeader(key, to!string(value));
     }
 
+    public string getHeader(string name) {
+        return headers[name];
+    }
+
+    public string getHost() {
+        return getHeader("host");
+    }
+
     protected string getStatusString() {
         if (status == HttpStatus.OK) {
             return "200 OK";
@@ -142,14 +150,26 @@ Accept-Language: en-US,en;q=0.8,ru;q=0.6
         return method == "HEAD";
     }
 
-    public override string toString() {
-        string response = "HTTP/1.0 " ~ getStatusString();
+    public string buildHeaders() {
+        string response = "";
 
         foreach(string key, value; headers) {
             response ~= "\r\n" ~ key ~ ": " ~ value;
         }
 
         return response;
+    }
+
+    public string buildResponseHeaders() {
+        return "HTTP/1.0 " ~ getStatusString() ~ buildHeaders();        
+    }
+
+    public string buildRequestHeaders() {
+        return "GET " ~ getURL() ~ " HTTP/1.1" ~ buildHeaders();        
+    }
+
+    public override string toString() {
+        return buildResponseHeaders();
     }
 }
 
